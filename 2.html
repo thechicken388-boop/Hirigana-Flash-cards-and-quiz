@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hiragana Flashcards & Quiz</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #eef1f5;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        h1 {
+            color: #007bff;
+            margin-bottom: 20px;
+            font-size: 2.5rem;
+        }
+
+        .level-select {
+            margin-bottom: 20px;
+        }
+
+        .level-select h2 {
+            margin-bottom: 10px;
+            font-size: 1.5rem;
+        }
+
+        .level-select button {
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        .level-select button:hover:not(:disabled) {
+            background-color: #e0e0e0;
+            transform: translateY(-2px);
+        }
+
+        .level-select button.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        
+        .level-select button:disabled {
+            background-color: #ccc;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        #mode-selection {
+            margin-top: 20px;
+        }
+
+        #mode-selection button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            margin: 0 10px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #mode-selection button:hover {
+            background-color: #218838;
+        }
+
+        .flashcard-section, .quiz-section {
+            display: none;
+        }
+
+        .flashcard-container {
+            perspective: 1000px;
+            width: 250px;
+            height: 250px;
+            margin: 40px auto;
+        }
+
+        .flashcard-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+
+        .flashcard-container.flipped .flashcard-inner {
+            transform: rotateY(180deg);
+        }
+
+        .flashcard-front, .flashcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            box-sizing: border-box;
+            padding: 20px;
+        }
+
+        .flashcard-front {
+            background-color: #ffffff;
+            color: #007bff;
+        }
+
+        .flashcard-back {
+            background-color: #007bff;
+            color: white;
+            transform: rotateY(180deg);
+            font-size: 1.5rem;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .flashcard-actions button {
+            margin: 10px 5px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .flashcard-actions button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Quiz specific styles */
+        .quiz-question {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+
+        #quiz-input {
+            font-size: 1.5rem;
+            padding: 10px;
+            width: 80%;
+            max-width: 300px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .quiz-actions button {
+            margin: 10px 5px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .quiz-actions button#submit-quiz-button {
+            background-color: #ffc107;
+            color: #333;
+        }
+
+        #quiz-feedback {
+            margin-top: 15px;
+            font-size: 1.2rem;
+        }
+
+        #quiz-results {
+            margin-top: 20px;
+        }
+
+        #quiz-results p {
+            font-size: 1.5rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #level-status {
+            font-size: 1.2rem;
+            color: #007bff;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Hiragana Learning App</h1>
+    <div class="level-select" id="level-selection">
+        <h2>Select Level</h2>
+    </div>
+
+    <div id="mode-selection">
+        <button id="start-flashcards-btn">Start Flashcards</button>
+        <button id="start-quiz-btn">Start Quiz</button>
+    </div>
+
+    <div id="level-status"></div>
+
+    <!-- Flashcard Section -->
+    <div id="flashcard-section" class="flashcard-section">
+        <div class="flashcard-container" id="flashcard">
+            <div class="flashcard-inner">
+                <div class="flashcard-front" id="flashcard-front"></div>
+                <div class="flashcard-back" id="flashcard-back"></div>
+            </div>
+        </div>
+        <div class="flashcard-actions">
+            <button id="flip-btn">Flip Card</button>
+            <button id="pronounce-btn">Pronounce</button>
+            <button id="next-btn">Next Card</button>
+        </div>
+    </div>
+
+    <!-- Quiz Section -->
+    <div id="quiz-section" class="quiz-section">
+        <p id="quiz-question" class="quiz-question"></p>
+        <input type="text" id="quiz-input" placeholder="Type the Romaji">
+        <div class="quiz-actions">
+            <button id="check-quiz-btn">Check</button>
+            <button id="next-quiz-btn" class="hidden">Next</button>
+            <button id="pronounce-quiz-btn">Pronounce</button>
+            <button id="submit-quiz-button" class="hidden">Submit Quiz</button>
+        </div>
+        <div id="quiz-feedback"></div>
+        <div id="quiz-results" class="hidden">
+            <p id="quiz-score"></p>
+            <p id="quiz-message"></p>
+            <button id="return-to-levels-btn">Return to Levels</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const levelsData = [
+        {
+            name: "Level 1 (あいうえお)",
+            hiragana: [
+                { char: "あ", romaji: "a", pronunciation: "like 'a' in f**ather**" },
+                { char: "い", romaji: "i", pronunciation: "like 'ee' in f**eet**" },
+                { char: "う", romaji: "u", pronunciation: "like 'oo' in f**ood**" },
+                { char: "え", romaji: "e", pronunciation: "like 'e' in p**et**" },
+                { char: "お", romaji: "o", pronunciation: "like 'o' in **o**h" }
+            ]
+        },
+        {
+            name: "Level 2 (かきくけこ)",
+            hiragana: [
+                { char: "か", romaji: "ka", pronunciation: "like 'ka' in **ca**r" },
+                { char: "き", romaji: "ki", pronunciation: "like 'ki' in **key**" },
+                { char: "く", romaji: "ku", pronunciation: "like 'coo' in **cuck**oo" },
+                { char: "け", romaji: "ke", pronunciation: "like 'ke' in **ke**lp" },
+                { char: "こ", romaji: "ko", pronunciation: "like 'co' in **co**in" }
+            ]
+        },
+        {
+            name: "Level 3 (さしすせそ)",
+            hiragana: [
+                { char: "さ", romaji: "sa", pronunciation: "like 'sa' in **sa**lsa" },
+                { char: "し", romaji: "shi", pronunciation: "like 'shee' in **shee**p" },
+                { char: "す", romaji: "su", pronunciation: "like 'soo' in **soo**t" },
+                { char: "せ", romaji: "se", pronunciation: "like 'se' in **se**ll" },
+                { char: "そ", romaji: "so", pronunciation: "like 'so' in **so**da" }
+            ]
+        },
+        {
+            name: "Level 4 (たちつてと)",
+            hiragana: [
+                { char: "た", romaji: "ta", pronunciation: "like 'ta' in **ta**co" },
+                { char: "ち", romaji: "chi", pronunciation: "like 'chee' in **chee**se" },
+                { char: "つ", romaji: "tsu", pronunciation: "like 'tsu' in **tsu**nami" },
+                { char: "て", romaji: "te", pronunciation: "like 'te' in **te**lescope" },
+                { char: "と", romaji: "to", pronunciation: "like 'to' in **to**e" }
+            ]
+        },
+        {
+            name: "Level 5 (なにぬねの)",
+            hiragana: [
+                { char: "な", romaji: "na", pronunciation: "like 'na' in **na**chos" },
+                { char: "に", romaji: "ni", pronunciation: "like 'nee' in **nee**dle" },
+                { char: "ぬ", romaji: "nu", pronunciation: "like 'noo' in **noo**dle" },
+                { char: "ね", romaji: "ne", pronunciation: "like 'ne' in **ne**llie" },
+                { char: "の", romaji: "no", pronunciation: "like 'no' in **no**se" }
+            ]
+        },
+        {
+            name: "Level 6 (はひふへほ)",
+            hiragana: [
+                { char: "は", romaji: "ha", pronunciation: "like 'ha' in **ha**t" },
+                { char: "ひ", romaji: "hi", pronunciation: "like 'hi' in **hi**t" },
+                { char: "ふ", romaji: "fu", pronunciation: "like 'fu' in **foo**d" },
+                { char: "へ", romaji: "he", pronunciation: "like 'he' in **he**n" },
+                { char: "ほ", romaji: "ho", pronunciation: "like 'ho' in **ho**t" }
+            ]
+        },
+        {
+            name: "Level 7 (まみむめも)",
+            hiragana: [
+                { char: "ま", romaji: "ma", pronunciation: "like 'ma' in **ma**ma" },
+                { char: "み", romaji: "mi", pronunciation: "like 'mi' in **mi**lk" },
+                { char: "む", romaji: "mu", pronunciation: "like 'moo' in **moo**n" },
+                { char: "め", romaji: "me", pronunciation: "like 'me' in **me**n" },
+                { char: "も", romaji: "mo", pronunciation: "like 'mo' in **mo**re" }
+            ]
+        },
+        {
+            name: "Level 8 (やゆよ)",
+            hiragana: [
+                { char: "や", romaji: "ya", pronunciation: "like 'ya' in **ya**rd" },
+                { char: "ゆ", romaji: "yu", pronunciation: "like 'yoo' in **yoo**n" },
+                { char: "よ", romaji: "yo", pronunciation: "like 'yo' in **yo**-yo" }
+            ]
+        },
+        {
+            name: "Level 9 (らりるれろ)",
+            hiragana: [
+                { char: "ら", romaji: "ra", pronunciation: "like 'ra' in **ra**in" },
+                { char: "り", romaji: "ri", pronunciation: "like 'ree' in **ree**l" },
+                { char: "る", romaji: "ru", pronunciation: "like 'roo' in **roo**m" },
+                { char: "れ", romaji: "re", pronunciation: "like 're' in **re**d" },
+                { char: "ろ", romaji: "ro", pronunciation: "like 'ro' in **ro**ck" }
+            ]
+        },
+        {
+            name: "Level 10 (わをん)",
+            hiragana: [
+                { char: "わ", romaji: "wa", pronunciation: "like 'wa' in **wa**ter" },
+                { char: "を", romaji: "o", pronunciation: "like 'o' in **o**h (often written 'wo' but pronounced 'o')" },
+                { char: "ん", romaji: "n", pronunciation: "like 'n' at the end of **ra**n" }
+            ]
+        },
+        {
+            name: "Level 11 (Dakuten & Handakuten)",
+            hiragana: [
+                { char: "が", romaji: "ga", pronunciation: "like 'ga' in **ga**te" },
+                { char: "ぎ", romaji: "gi", pronunciation: "like 'gee' in **gee**se" },
+                { char: "ぐ", romaji: "gu", pronunciation: "like 'goo' in **goo**d" },
+                { char: "げ", romaji: "ge", pronunciation: "like 'ge' in **ge**t" },
+                { char: "ご", romaji: "go", pronunciation: "like 'go' in **go**" },
+                { char: "ざ", romaji: "za", pronunciation: "like 'za' in **za**ny" },
+                { char: "じ", romaji: "ji", pronunciation: "like 'jee' in **jee**p" },
+                { char: "ず", romaji: "zu", pronunciation: "like 'zoo' in **zoo**" },
+                { char: "ぜ", romaji: "ze", pronunciation: "like 'ze' in **ze**n" },
+                { char: "ぞ", romaji: "zo", pronunciation: "like 'zo' in **zo**ne" },
+                { char: "だ", romaji: "da", pronunciation: "like 'da' in **da**d" },
+                { char: "ぢ", romaji: "ji", pronunciation: "like 'jee' in **jee**p (same sound as じ)" },
+                { char: "づ", romaji: "zu", pronunciation: "like 'zoo' in **zoo** (same sound as ず)" },
+                { char: "で", romaji: "de", pronunciation: "like 'de' in **de**n" },
+                { char: "ど", romaji: "do", pronunciation: "like 'do' in **do**or" },
+                { char: "ば", romaji: "ba", pronunciation: "like 'ba' in **ba**t" },
+                { char: "び", romaji: "bi", pronunciation: "like 'bee' in **bee**" },
+                { char: "ぶ", romaji: "bu", pronunciation: "like 'boo' in **boo**m" },
+                { char: "べ", romaji: "be", pronunciation: "like 'be' in **be**t" },
+                { char: "ぼ", romaji: "bo", pronunciation: "like 'bo' in **bo**at" },
+                { char: "ぱ", romaji: "pa", pronunciation: "like 'pa' in **pa**per" },
+                { char: "ぴ", romaji: "pi", pronunciation: "like 'pee' in **pee**r" },
+                { char: "ぷ", romaji: "pu", pronunciation: "like 'poo' in **poo**l" },
+                { char: "ぺ", romaji: "pe", pronunciation: "like 'pe' in **pe**t" },
+                { char: "ぽ", romaji: "po", pronunciation: "like 'po' in **po**le" }
+            ]
+        }
+    ];
+
+    const levelSelectionEl = document.getElementById('level-selection');
+    const modeSelectionEl = document.getElementById('mode-selection');
+    const flashcardSectionEl = document.getElementById('flashcard-section');
+    const quizSectionEl = document.getElementById('quiz-section');
+    const levelStatusEl = document.getElementById('level-status');
+
+    const flashcardEl = document.getElementById('flashcard');
+    const flashcardFrontEl = document.getElementById('flashcard-front');
+    const flashcardBackEl = document.getElementById('flashcard-back');
+    const flipBtn = document.getElementById('flip-btn');
+    const pronounceBtn = document.getElementById('pronounce-btn');
+    const nextBtn = document.getElementById('next-btn');
+
+    const quizQuestionEl = document.getElementById('quiz-question');
+    const quizInputEl = document.getElementById('quiz-input');
+    const checkQuizBtn = document.getElementById('check-quiz-btn');
+    const nextQuizBtn = document.getElementById('next-quiz-btn');
+    const pronounceQuizBtn = document.getElementById('pronounce-quiz-btn');
+    const submitQuizBtn = document.getElementById('submit-quiz-button');
+    const quizFeedbackEl = document.getElementById('quiz-feedback');
+    const quizResultsEl = document.getElementById('quiz-results');
+    const quizScoreEl = document.getElementById('quiz-score');
+    const quizMessageEl = document.getElementById('quiz-message');
+    const returnToLevelsBtn = document.getElementById('return-to-levels-btn');
+
+    const startFlashcardsBtn = document.getElementById('start-flashcards-btn');
+    const startQuizBtn = document.getElementById('start-quiz-btn');
+
+    let currentLevelIndex = 0;
+    let currentCardIndex = 0;
+    let quizData = [];
+    let currentQuizIndex = 0;
+    let correctAnswers = 0;
+    const requiredScore = 0.9;
+
+    function init() {
+        loadProgress();
+        renderLevelButtons();
+        updateLevelStatus();
+    }
+
+    function saveProgress() {
+        const progressToSave = levelsData.map(level => ({ isComplete: level.isComplete }));
+        localStorage.setItem('hiraganaProgress', JSON.stringify(progressToSave));
+    }
+
+    function loadProgress() {
+        const savedProgress = localStorage.getItem('hiraganaProgress');
+        if (savedProgress) {
+            const progress = JSON.parse(savedProgress);
+            levelsData.forEach((level, index) => {
+                if (progress[index] && progress[index].isComplete) {
+                    level.isComplete = true;
+                }
+            });
+        }
+    }
+
+    function renderLevelButtons() {
+        levelSelectionEl.innerHTML = '<h2>Select Level</h2>';
+        levelsData.forEach((level, index) => {
+            const button = document.createElement('button');
+            button.textContent = level.name;
+            button.disabled = index > 0 && !levelsData[index - 1].isComplete;
+            if (index === currentLevelIndex) {
+                button.classList.add('active');
+            }
+            button.addEventListener('click', () => {
+                currentLevelIndex = index;
+                updateLevelStatus();
+                updateLevelButtons();
+            });
+            levelSelectionEl.appendChild(button);
+        });
+    }
+
+    function updateLevelButtons() {
+        const buttons = levelSelectionEl.querySelectorAll('button');
+        buttons.forEach((btn, index) => {
+            btn.classList.remove('active');
+            if (index === currentLevelIndex) {
+                btn.classList.add('active');
+            }
+        });
+    }
+
+    function updateLevelStatus() {
+        if (levelsData[currentLevelIndex].isComplete) {
+            levelStatusEl.textContent = `Level ${currentLevelIndex + 1} complete!`;
+        } else {
+            levelStatusEl.textContent = `Currently on Level ${currentLevelIndex + 1}.`;
+        }
+    }
+
+    function startFlashcards() {
+        modeSelectionEl.style.display = 'none';
+        levelSelectionEl.style.display = 'none';
+        flashcardSectionEl.style.display = 'block';
+        currentCardIndex = 0;
+        showFlashcard();
+    }
+
+    function showFlashcard() {
+        const currentCard = levelsData[currentLevelIndex].hiragana[currentCardIndex];
+        flashcardFrontEl.textContent = currentCard.char;
+        flashcardBackEl.innerHTML = `<span>${currentCard.romaji}</span><br>(${currentCard.pronunciation})`;
+        flashcardEl.classList.remove('flipped');
+    }
+
+    function nextFlashcard() {
+        currentCardIndex++;
+        if (currentCardIndex >= levelsData[currentLevelIndex].hiragana.length) {
+            alert("End of flashcards. Try the quiz!");
+            returnToLevels();
+        } else {
+            showFlashcard();
+        }
+    }
+
+    function startQuiz() {
+        modeSelectionEl.style.display = 'none';
+        levelSelectionEl.style.display = 'none';
+        quizSectionEl.style.display = 'block';
+        
+        let cumulativeData = [];
+        for (let i = 0; i <= currentLevelIndex; i++) {
+            cumulativeData = cumulativeData.concat(levelsData[i].hiragana);
+        }
+        quizData = shuffle(cumulativeData);
+
+        currentQuizIndex = 0;
+        correctAnswers = 0;
+        showQuizQuestion();
+    }
+
+    function showQuizQuestion() {
+        if (currentQuizIndex < quizData.length) {
+            const currentQuizItem = quizData[currentQuizIndex];
+            quizQuestionEl.textContent = currentQuizItem.char;
+            quizInputEl.value = '';
+            quizFeedbackEl.textContent = '';
+            checkQuizBtn.style.display = 'inline-block';
+            nextQuizBtn.style.display = 'none';
+            submitQuizBtn.style.display = 'none';
+        } else {
+            endQuiz();
+        }
+    }
+
+    function checkQuizAnswer() {
+        const currentQuizItem = quizData[currentQuizIndex];
+        const userAnswer = quizInputEl.value.trim().toLowerCase();
+        const correctAnswer = currentQuizItem.romaji.toLowerCase();
+
+        if (userAnswer === correctAnswer) {
+            quizFeedbackEl.textContent = "Correct!";
+            quizFeedbackEl.style.color = "green";
+            correctAnswers++;
+        } else {
+            quizFeedbackEl.textContent = `Incorrect. The correct answer was "${correctAnswer}".`;
+            quizFeedbackEl.style.color = "red";
+        }
+        checkQuizBtn.style.display = 'none';
+        if (currentQuizIndex < quizData.length - 1) {
+            nextQuizBtn.style.display = 'inline-block';
+        } else {
+            submitQuizBtn.style.display = 'inline-block';
+        }
+    }
+
+    function nextQuizQuestion() {
+        currentQuizIndex++;
+        showQuizQuestion();
+    }
+
+    function endQuiz() {
+        const percentage = (correctAnswers / quizData.length);
+        let message = '';
+        if (percentage >= requiredScore) {
+            if (currentLevelIndex < levelsData.length - 1) {
+                levelsData[currentLevelIndex].isComplete = true;
+                saveProgress();
+                message = `Congratulations! You passed with a ${Math.round(percentage * 100)}% and unlocked the next level!`;
+            } else {
+                levelsData[currentLevelIndex].isComplete = true;
+                saveProgress();
+                message = `Congratulations! You passed all levels with a ${Math.round(percentage * 100)}% and have completed all Hiragana!`;
+            }
+        } else {
+            message = `You got ${Math.round(percentage * 100)}%. You need at least ${Math.round(requiredScore * 100)}% to pass. Please try again.`;
+        }
+
+        quizScoreEl.textContent = `Your score: ${correctAnswers} / ${quizData.length}`;
+        quizMessageEl.textContent = message;
+        quizResultsEl.classList.remove('hidden');
+        quizQuestionEl.textContent = '';
+        quizInputEl.style.display = 'none';
+        checkQuizBtn.style.display = 'none';
+        nextQuizBtn.style.display = 'none';
+        submitQuizBtn.style.display = 'none';
+        pronounceQuizBtn.style.display = 'none';
+        quizFeedbackEl.textContent = '';
+    }
+
+    function returnToLevels() {
+        flashcardSectionEl.style.display = 'none';
+        quizSectionEl.style.display = 'none';
+        modeSelectionEl.style.display = 'block';
+        levelSelectionEl.style.display = 'block';
+        quizInputEl.style.display = 'inline-block';
+        pronounceQuizBtn.style.display = 'inline-block';
+        quizResultsEl.classList.add('hidden');
+        renderLevelButtons();
+        updateLevelStatus();
+    }
+
+    function speakText(text) {
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ja-JP';
+            window.speechSynthesis.speak(utterance);
+        } else {
+            alert('Text-to-speech not supported in this browser.');
+        }
+    }
+    
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    // Event Listeners for Flashcard Section
+    flashcardEl.addEventListener('click', () => flashcardEl.classList.toggle('flipped'));
+    flipBtn.addEventListener('click', () => flashcardEl.classList.toggle('flipped'));
+    pronounceBtn.addEventListener('click', () => speakText(levelsData[currentLevelIndex].hiragana[currentCardIndex].char));
+    nextBtn.addEventListener('click', nextFlashcard);
+
+    // Event Listeners for Quiz Section
+    startFlashcardsBtn.addEventListener('click', startFlashcards);
+    startQuizBtn.addEventListener('click', startQuiz);
+    checkQuizBtn.addEventListener('click', checkQuizAnswer);
+    nextQuizBtn.addEventListener('click', nextQuizQuestion);
+    submitQuizBtn.addEventListener('click', endQuiz);
+    pronounceQuizBtn.addEventListener('click', () => speakText(quizData[currentQuizIndex].char));
+    returnToLevelsBtn.addEventListener('click', returnToLevels);
+
+    // Quiz input listener for 'Enter' key
+    quizInputEl.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+            if (checkQuizBtn.style.display !== 'none') {
+                checkQuizAnswer();
+            } else if (nextQuizBtn.style.display !== 'none') {
+                nextQuizQuestion();
+            } else if (submitQuizBtn.style.display !== 'none') {
+                endQuiz();
+            }
+        }
+    });
+
+    // Initial setup
+    init();
+</script>
+
+</body>
+</html>
